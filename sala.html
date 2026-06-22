@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sala - Pastamania</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg-color: #fdfcf5; --header-bg: #f8f1e5; --primary-text: #3e2723; --accent-color: #e67e22; --shadow: 0 4px 6px rgba(0,0,0,0.05); --locked-color: #9b59b6; }
+        body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background-color: var(--bg-color); color: var(--primary-text); }
+        .header { background-color: var(--header-bg); padding: 20px; text-align: center; box-shadow: var(--shadow); border-bottom: 2px solid #eae0d0; }
+        .header h1 { margin: 0; font-family: 'Playfair Display', serif; font-size: 2.5em; color: #8d6e63; }
+        .header h2 { margin: 5px 0 0 0; font-weight: 400; font-size: 1.1em; opacity: 0.8; }
+        .layout { display: flex; flex-wrap: wrap; max-width: 1200px; margin: auto; padding: 20px; gap: 30px; }
+        .panel-mesas { flex: 2; min-width: 300px; }
+        .panel-registro { flex: 1; min-width: 250px; background: white; padding: 20px; border-radius: 15px; box-shadow: var(--shadow); border: 2px solid #eae0d0; max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column;}
+        .cabecera-registro { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f1f1; padding-bottom: 10px; margin-bottom: 10px; }
+        .cabecera-registro h3 { margin: 0; }
+        #btn-limpiar { background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 8px; font-family: 'Poppins', sans-serif; font-size: 0.8em; cursor: pointer; transition: 0.2s; }
+        #btn-limpiar:hover { background: #c0392b; transform: scale(1.05); }
+        .log-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f1f1; font-weight: 600;}
+        .log-item .hora { opacity: 0.6; font-weight: 400; font-size: 0.9em;}
+        .etiqueta-carne { font-size: 0.75em; background: #e74c3c; color: white; padding: 3px 8px; border-radius: 6px; margin-left: 5px; }
+        .etiqueta-dentro { font-size: 0.75em; background: #2ecc71; color: white; padding: 3px 8px; border-radius: 6px; margin-left: 5px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 15px; padding: 20px 0; }
+        button.mesa-btn { aspect-ratio: 1 / 1; font-size: 22px; font-weight: 600; cursor: pointer; background: white; color: var(--primary-text); border: 2px solid #eae0d0; border-radius: 12px; box-shadow: var(--shadow); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center;}
+        button.mesa-btn:hover:not(:disabled) { transform: translateY(-3px); border-color: var(--accent-color); color: var(--accent-color); }
+        button.mesa-btn:active:not(:disabled) { background-color: var(--accent-color); color: white; transform: translateY(1px); }
+        button.mesa-btn:disabled { border: 3px solid var(--locked-color) !important; background-color: #f5eef8; color: var(--locked-color); cursor: not-allowed; opacity: 0.7; transform: none; box-shadow: none; }
+        #notificacion { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2ecc71; color: white; padding: 15px 30px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: none; font-weight: 600; z-index: 100; }
+        #overlay-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal { background: white; padding: 30px; border-radius: 20px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal h2 { margin-top: 0; color: var(--primary-text); }
+        .modal-botones { display: flex; gap: 15px; justify-content: center; margin-top: 25px; }
+        .btn-modal { flex: 1; padding: 15px; font-size: 1.2em; font-weight: 600; border: none; border-radius: 10px; cursor: pointer; transition: 0.2s; color: white;}
+        .btn-si { background-color: #e74c3c; } .btn-si:hover { background-color: #c0392b; }
+        .btn-no { background-color: #3498db; } .btn-no:hover { background-color: #2980b9; }
+        .btn-cancelar { width: 100%; margin-top: 15px; padding: 10px; background: transparent; color: #7f8c8d; border: 1px solid #bdc3c7; border-radius: 10px; cursor: pointer; font-weight: 600;}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Pastamania</h1>
+        <h2>Panel de Sala - Marchar Mesa</h2>
+    </div>
+
+    <div class="layout">
+        <div class="panel-mesas">
+            <div class="grid" id="contenedor-mesas"></div>
+        </div>
+        <div class="panel-registro">
+            <div class="cabecera-registro">
+                <h3>Registro</h3>
+                <button id="btn-limpiar" title="Borrar todo el historial">🗑️ Limpiar</button>
+            </div>
+            <div id="lista-registro"></div>
+        </div>
+    </div>
+
+    <div id="notificacion">Mesa enviada</div>
+    <div id="overlay-modal">
+        <div class="modal">
+            <h2 id="titulo-modal">Mesa X</h2>
+            <p>¿Esta mesa incluye carnes para los fuegos?</p>
+            <div class="modal-botones">
+                <button class="btn-modal btn-si" id="btn-carne-si">🥩 SÍ</button>
+                <button class="btn-modal btn-no" id="btn-carne-no">🍝 NO</button>
+            </div>
+            <button class="btn-cancelar" id="btn-cancelar-modal">Cancelar</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"; 
+        import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDBcfwxeLFhbYVZOUT8Wv-SadGgzdQ6jDk",
+            authDomain: "pastamania-acloyu.firebaseapp.com",
+            projectId: "pastamania-acloyu",
+            storageBucket: "pastamania-acloyu.firebasestorage.app",
+            messagingSenderId: "8921703992",
+            appId: "1:8921703992:web:f9c7562108acf6aedea8cd",
+            measurementId: "G-YDHFWBVKV7",
+            databaseURL: "https://pastamania-acloyu-default-rtdb.europe-west1.firebasedatabase.app"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        
+        const historialRef = ref(db, 'historial_mesas');
+        const bloqueosRef = ref(db, 'mesas_bloqueadas');
+
+        const contenedor = document.getElementById('contenedor-mesas');
+        const listaRegistro = document.getElementById('lista-registro');
+        const notif = document.getElementById('notificacion');
+        const overlayModal = document.getElementById('overlay-modal');
+        const tituloModal = document.getElementById('titulo-modal');
+        let mesaSeleccionadaActual = null;
+        let bloqueosActuales = {};
+
+        for (let i = 1; i <= 70; i++) {
+            let btn = document.createElement('button');
+            btn.className = 'mesa-btn';
+            btn.id = `btn-mesa-${i}`;
+            btn.innerText = i;
+            btn.onclick = () => abrirModalCarnes(i);
+            contenedor.appendChild(btn);
+        }
+
+        function abrirModalCarnes(numero) {
+            mesaSeleccionadaActual = numero;
+            tituloModal.innerText = `Marchar Mesa ${numero}`;
+            overlayModal.style.display = 'flex';
+        }
+
+        function cerrarModal() { overlayModal.style.display = 'none'; mesaSeleccionadaActual = null; }
+
+        document.getElementById('btn-cancelar-modal').onclick = cerrarModal;
+        document.getElementById('btn-carne-si').onclick = () => { procesarMarcha(mesaSeleccionadaActual, true); cerrarModal(); };
+        document.getElementById('btn-carne-no').onclick = () => { procesarMarcha(mesaSeleccionadaActual, false); cerrarModal(); };
+
+        function procesarMarcha(numero, tieneCarnes) {
+            const timestampActual = Date.now();
+            const horaActual = new Date(timestampActual).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const fechaActual = new Date(timestampActual).toISOString().split('T')[0];
+            
+            // 1. Crear registro en estadísticas para el Admin
+            const statRef = push(ref(db, 'estadisticas'));
+            const statId = statRef.key;
+            set(statRef, {
+                mesa: numero,
+                carnes: tieneCarnes,
+                fecha: fechaActual,
+                timestamp_marchada: timestampActual
+            });
+
+            // 2. Crear un ID común para Cocina y Fuegos (clave para cambiar el color después)
+            const mesaIdComun = push(ref(db, 'mesas_cocina')).key;
+
+            // Generar clave del historial
+            const historialId = push(historialRef).key;
+
+            const datosMesa = { 
+                mesa: numero, 
+                hora: horaActual, 
+                carnes: tieneCarnes,
+                historialId: historialId,
+                statId: statId, // Para que cocina y fuegos puedan actualizar la estadística
+                estado: 'marchada',
+                estadoCocina: 'esperando' // Usado por Fuegos para el color
+            };
+            
+            // Guardar en todas las rutas
+            set(ref(db, `historial_mesas/${historialId}`), datosMesa);
+            set(ref(db, `mesas_cocina/${mesaIdComun}`), datosMesa);
+            
+            if(tieneCarnes) { 
+                set(ref(db, `mesas_fuegos/${mesaIdComun}`), datosMesa); 
+            }
+            
+            notif.innerText = `Mesa ${numero} enviada`;
+            notif.style.display = 'block';
+            setTimeout(() => notif.style.display = 'none', 2000);
+        }
+
+        document.getElementById('btn-limpiar').onclick = () => {
+            if(confirm("¿Borrar todo el registro y desbloquear todas las mesas?")) {
+                remove(historialRef);
+                remove(bloqueosRef);
+            }
+        };
+
+        onValue(historialRef, (snapshot) => {
+            listaRegistro.innerHTML = '';
+            const datos = snapshot.val();
+            if (datos) {
+                const arrayMesas = Object.values(datos).reverse(); 
+                arrayMesas.forEach(mesa => {
+                    const eqCarne = mesa.carnes ? '<span class="etiqueta-carne">Carnes</span>' : '';
+                    const eqDentro = mesa.estado === 'dentro' ? '<span class="etiqueta-dentro">Dentro</span>' : '';
+                    
+                    listaRegistro.innerHTML += `
+                        <div class="log-item">
+                            <span>Mesa ${mesa.mesa} ${eqCarne} ${eqDentro}</span> 
+                            <span class="hora">${mesa.hora}</span>
+                        </div>`;
+                });
+            } else {
+                listaRegistro.innerHTML = '<p style="text-align:center; opacity:0.5; margin-top:20px;">Aún no hay mesas marchadas</p>';
+            }
+        });
+
+        function actualizarBotonesBloqueados() {
+            const ahora = Date.now();
+            for (let i = 1; i <= 70; i++) {
+                const btn = document.getElementById(`btn-mesa-${i}`);
+                if (!btn) continue;
+                
+                const bloqueo = bloqueosActuales[i];
+                if (bloqueo && ahora < bloqueo.bloqueadaHasta) {
+                    btn.disabled = true;
+                } else {
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        onValue(bloqueosRef, (snapshot) => {
+            bloqueosActuales = snapshot.val() || {};
+            actualizarBotonesBloqueados();
+        });
+
+        setInterval(actualizarBotonesBloqueados, 10000);
+                // === LÓGICA DEL MODAL SORPRESA ===
+        const MI_ESTACION = "sala"; // <-- ¡CAMBIA ESTO EN CADA HTML (sala, cocina, fuegos)!
+
+        const modalSorpresa = document.getElementById('modal-sorpresa');
+        const btnSorpresa = document.getElementById('btn-sorpresa');
+        const textoEspera = document.getElementById('texto-espera');
+        const audioEspecial = document.getElementById('audio-especial');
+
+        let audioDesbloqueado = false;
+        let sorpresaReproducida = false;
+
+        // 1. Cuando el camarero/cocinero pulsa el botón en su tablet
+        btnSorpresa.addEventListener('click', () => {
+            // Engañamos al navegador reproduciendo y pausando rápido el audio a volumen 0
+            // Esto nos da "permiso" para hacerlo sonar luego automáticamente.
+            audioEspecial.volume = 0;
+            audioEspecial.play().then(() => {
+                audioEspecial.pause();
+                audioEspecial.currentTime = 0;
+                audioEspecial.volume = 1;
+                audioDesbloqueado = true;
+
+                // Cambiamos lo que se ve en pantalla
+                btnSorpresa.style.display = 'none';
+                textoEspera.style.display = 'block';
+
+                // Avisamos a Firebase de que ESTA tablet ya está lista
+                update(ref(db, 'sorpresa_estado'), {
+                    [MI_ESTACION]: true
+                });
+            }).catch(err => console.log("Error desbloqueando audio:", err));
+        });
+
+        // 2. Escuchamos en tiempo real cómo van las demás tablets
+        onValue(ref(db, 'sorpresa_estado'), (snapshot) => {
+            const estado = snapshot.val() || {};
+            const todosListos = estado.sala && estado.cocina && estado.fuegos;
+
+            if (!todosListos) {
+                // Si falta alguien, el modal sigue mostrándose (ideal para cuando reseteas la broma)
+                modalSorpresa.style.display = 'flex';
+        
+                // Si en mi estación el estado no es true, muestro el botón. Si es true, muestro el texto de espera.
+                if (!estado[MI_ESTACION]) {
+                    btnSorpresa.style.display = 'block';
+                    textoEspera.style.display = 'none';
+                }
+                sorpresaReproducida = false;
+        
+            } else {
+                // ¡LAS 3 TABLETS HAN PULSADO!
+                modalSorpresa.style.display = 'none'; // Escondemos el modal y liberamos las pantallas
+
+                // Si yo pulsé el botón y aún no ha sonado, lo lanzo.
+                if (audioDesbloqueado && !sorpresaReproducida) {
+                    audioEspecial.currentTime = 0;
+                    audioEspecial.play().catch(e => console.error(e));
+                    sorpresaReproducida = true;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

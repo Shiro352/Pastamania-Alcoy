@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuegos - Pastamania</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg-color: #fdfcf5; --header-bg: #f8f1e5; --primary-text: #3e2723; --warning-color: #f39c12; --orden-bg: #e74c3c; --shadow: 0 4px 6px rgba(0,0,0,0.05); --neon-beige: #f5f5dc;}
+        body, html { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background-color: var(--bg-color); color: var(--primary-text); text-align: center; height: 100vh; width: 100vw; overflow: hidden; display: flex; flex-direction: column; }
+        
+        .header { position: relative; background-color: var(--header-bg); padding: 10px 20px; box-shadow: var(--shadow); border-bottom: 2px solid #eae0d0; flex-shrink: 0; }
+        .header h1 { margin: 0; font-family: 'Playfair Display', serif; font-size: 2em; color: #8d6e63; }
+        .header h2 { margin: 5px 0 0 0; font-weight: 400; font-size: 1em; opacity: 0.8; }
+        
+        #btn-fullscreen { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.1); border: none; border-radius: 8px; font-size: 1.5em; cursor: pointer; padding: 5px 15px; color: var(--primary-text); transition: 0.2s; }
+        #btn-fullscreen:hover { background: rgba(0,0,0,0.2); transform: scale(1.05); }
+
+        #btn-sonido { background-color: #e67e22; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: 600; cursor: pointer; margin: 10px auto; display: inline-flex; z-index: 100; }
+        #lista-mesas { display: grid; flex-grow: 1; gap: 15px; padding: 15px; box-sizing: border-box; align-items: stretch; justify-items: stretch; }
+        
+        /* ESTILO NORMAL (Mesa esperando que Cocina la meta) */
+        .mesa-item { background: white; border: 2px solid #eae0d0; color: var(--primary-text); border-radius: 15px; box-shadow: var(--shadow); display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; width: 100%; height: 100%; }
+        .mesa-item::after { content: 'TOCA PARA SACAR'; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--warning-color); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 1.5vw; opacity: 0; transition: opacity 0.2s; text-align: center; padding: 10px; }
+        .mesa-item:hover { border-color: var(--warning-color); transform: translateY(-2px); }
+        .mesa-item:hover::after { opacity: 1; }
+
+        /* NUEVO: ESTILO CUANDO LA MESA YA ESTÁ EN COCINA */
+        .mesa-item.en-cocina { background-color: #2ecc71; color: white; border-color: #27ae60; animation: pulsoVerde 2s infinite alternate;}
+        .mesa-item.en-cocina .badge-orden { background-color: rgba(0,0,0,0.3); }
+        .mesa-item.en-cocina .mesa-hora { background-color: rgba(0,0,0,0.2); }
+        .mesa-item.en-cocina::after { background: #27ae60; content: 'Dentro del Horno :D'; }
+
+        @keyframes pulsoVerde { from { box-shadow: 0 0 5px rgba(46, 204, 113, 0.4); } to { box-shadow: 0 0 20px rgba(46, 204, 113, 0.8); } }
+
+        .mesa-numero { font-size: 3vw; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; justify-content: center;}
+        .badge-orden { background-color: var(--orden-bg); color: white; padding: 5px 15px; border-radius: 12px; font-size: 0.5em; font-weight: 700; margin-right: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); transition: background 0.3s;}
+        .mesa-hora { font-size: 1.5vw; opacity: 0.7; background: #f1f1f1; padding: 5px 10px; border-radius: 8px; transition: background 0.3s;}
+        h2.vacio { opacity: 0.5; margin-top: 50px; font-weight: 400; grid-column: 1 / -1;}
+
+        #pantalla-animacion { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.85); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; pointer-events: none; }
+        #pantalla-animacion.activa { animation: aparecerDesaparecer 3.5s forwards; box-shadow: inset 0 0 100px rgba(245, 245, 220, 0.3); }
+        #texto-animacion { font-size: 12vw; color: #fff; text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px var(--neon-beige), 0 0 30px var(--neon-beige), 0 0 40px var(--neon-beige), 0 0 55px var(--neon-beige), 0 0 75px var(--neon-beige); margin: 0; text-transform: uppercase; }
+        @keyframes aparecerDesaparecer { 0% { transform: scale(0.2); opacity: 0; } 15% { transform: scale(1.2); opacity: 1; } 25% { transform: scale(1); opacity: 1; } 80% { transform: scale(1); opacity: 1; } 100% { transform: scale(3); opacity: 0; } }
+        .oculto { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Pastamania</h1>
+        <h2>Panel de Fuegos - Expedir</h2>
+        <button id="btn-fullscreen" title="Pantalla Completa">⛶</button>
+    </div>
+
+    <button id="btn-sonido">🔔 Activar Sonido y Conectar</button>
+    <div id="lista-mesas"></div>
+
+    <div id="pantalla-animacion" class="oculto"><h1 id="texto-animacion">MESA 1</h1></div>
+    <audio id="audio-nueva-comanda" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"; 
+        import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDBcfwxeLFhbYVZOUT8Wv-SadGgzdQ6jDk",
+            authDomain: "pastamania-acloyu.firebaseapp.com",
+            projectId: "pastamania-acloyu",
+            storageBucket: "pastamania-acloyu.firebasestorage.app",
+            messagingSenderId: "8921703992",
+            appId: "1:8921703992:web:f9c7562108acf6aedea8cd",
+            measurementId: "G-YDHFWBVKV7",
+            databaseURL: "https://pastamania-acloyu-default-rtdb.europe-west1.firebasedatabase.app"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        
+        const fuegosRef = ref(db, 'mesas_fuegos');
+        const contenedor = document.getElementById('lista-mesas');
+
+        let sonidoActivado = false;
+        let mesasConocidas = []; 
+        let esPrimeraCarga = true; 
+        const audioElement = document.getElementById('audio-nueva-comanda');
+        const btnSonido = document.getElementById('btn-sonido');
+        const btnFullscreen = document.getElementById('btn-fullscreen');
+
+        btnFullscreen.addEventListener('click', () => {
+            if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch((err) => {}); } else { document.exitFullscreen(); }
+        });
+
+        btnSonido.addEventListener('click', () => {
+            audioElement.volume = 0;
+            audioElement.play().then(() => {
+                audioElement.pause(); audioElement.currentTime = 0; audioElement.volume = 1; sonidoActivado = true;
+                btnSonido.style.backgroundColor = "#6c757d"; btnSonido.innerHTML = "🔊 Fuegos Conectados"; btnSonido.style.pointerEvents = "none";
+            }).catch(e => console.error(e));
+        });
+
+        function animarMesaEntrante(nombreMesa) {
+            const pantallaAnim = document.getElementById('pantalla-animacion');
+            document.getElementById('texto-animacion').innerText = nombreMesa; 
+            pantallaAnim.classList.remove('oculto'); pantallaAnim.classList.remove('activa');
+            void pantallaAnim.offsetWidth; 
+            pantallaAnim.classList.add('activa');
+            setTimeout(() => { pantallaAnim.classList.add('oculto'); pantallaAnim.classList.remove('activa'); }, 3500);
+        }
+
+        function ajustarTamañoMesas() {
+            const cantidad = contenedor.children.length;
+            if (cantidad === 0) { contenedor.style.gridTemplateColumns = '1fr'; contenedor.style.gridTemplateRows = '1fr'; return; }
+            const col = Math.ceil(Math.sqrt(cantidad));
+            const fil = Math.ceil(cantidad / col);
+            contenedor.style.gridTemplateColumns = `repeat(${col}, 1fr)`;
+            contenedor.style.gridTemplateRows = `repeat(${fil}, 1fr)`;
+        }
+
+        onValue(fuegosRef, (snapshot) => {
+            contenedor.innerHTML = '';
+            const datos = snapshot.val();
+            const keysActuales = datos ? Object.keys(datos) : [];
+            
+            if (!esPrimeraCarga && datos) {
+                const nuevas = keysActuales.filter(k => !mesasConocidas.includes(k));
+                if (nuevas.length > 0) {
+                    animarMesaEntrante(`MESA ${datos[nuevas[0]].mesa}`);
+                    if (sonidoActivado) { audioElement.currentTime = 0; audioElement.play().catch(e => console.log(e)); }
+                }
+            }
+            
+            if (datos) {
+                let contadorOrden = 1; 
+                keysActuales.forEach(key => {
+                    const mesa = datos[key];
+                    let div = document.createElement('div');
+                    div.className = 'mesa-item';
+                    
+                    // LÓGICA DE COLOR: Si la cocina la ha metido, añadimos la clase para pintarla verde
+                    if (mesa.estadoCocina === 'dentro') {
+                        div.classList.add('en-cocina');
+                    }
+
+                    div.innerHTML = `<span class="mesa-numero"><span class="badge-orden">${contadorOrden}º</span> Mesa ${mesa.mesa}</span> <span class="mesa-hora">${mesa.hora}</span>`;
+                    
+                    div.onclick = () => { 
+                        // Actualizar la hora de salida para la estadística general del Admin
+                        if(mesa.statId) {
+                            update(ref(db, `estadisticas/${mesa.statId}`), { timestamp_salida: Date.now() });
+                        }
+                        // Quitar de Fuegos
+                        remove(ref(db, `mesas_fuegos/${key}`)); 
+                    };
+                    
+                    contenedor.appendChild(div);
+                    contadorOrden++; 
+                });
+            } else {
+                contenedor.innerHTML = '<h2 class="vacio">Fuegos vacíos</h2>';
+            }
+            
+            mesasConocidas = keysActuales;
+            esPrimeraCarga = false;
+            ajustarTamañoMesas();
+        });
+                // === LÓGICA DEL MODAL SORPRESA ===
+        const MI_ESTACION = "fuegos"; // <-- ¡CAMBIA ESTO EN CADA HTML (sala, cocina, fuegos)!
+
+        const modalSorpresa = document.getElementById('modal-sorpresa');
+        const btnSorpresa = document.getElementById('btn-sorpresa');
+        const textoEspera = document.getElementById('texto-espera');
+        const audioEspecial = document.getElementById('audio-especial');
+
+        let audioDesbloqueado = false;
+        let sorpresaReproducida = false;
+
+        // 1. Cuando el camarero/cocinero pulsa el botón en su tablet
+        btnSorpresa.addEventListener('click', () => {
+            // Engañamos al navegador reproduciendo y pausando rápido el audio a volumen 0
+            // Esto nos da "permiso" para hacerlo sonar luego automáticamente.
+            audioEspecial.volume = 0;
+            audioEspecial.play().then(() => {
+                audioEspecial.pause();
+                audioEspecial.currentTime = 0;
+                audioEspecial.volume = 1;
+                audioDesbloqueado = true;
+
+                // Cambiamos lo que se ve en pantalla
+                btnSorpresa.style.display = 'none';
+                textoEspera.style.display = 'block';
+
+                // Avisamos a Firebase de que ESTA tablet ya está lista
+                update(ref(db, 'sorpresa_estado'), {
+                    [MI_ESTACION]: true
+                });
+            }).catch(err => console.log("Error desbloqueando audio:", err));
+        });
+
+        // 2. Escuchamos en tiempo real cómo van las demás tablets
+        onValue(ref(db, 'sorpresa_estado'), (snapshot) => {
+            const estado = snapshot.val() || {};
+            const todosListos = estado.sala && estado.cocina && estado.fuegos;
+
+            if (!todosListos) {
+                // Si falta alguien, el modal sigue mostrándose (ideal para cuando reseteas la broma)
+                modalSorpresa.style.display = 'flex';
+        
+                // Si en mi estación el estado no es true, muestro el botón. Si es true, muestro el texto de espera.
+                if (!estado[MI_ESTACION]) {
+                    btnSorpresa.style.display = 'block';
+                    textoEspera.style.display = 'none';
+                }
+                sorpresaReproducida = false;
+        
+            } else {
+                // ¡LAS 3 TABLETS HAN PULSADO!
+                modalSorpresa.style.display = 'none'; // Escondemos el modal y liberamos las pantallas
+
+                // Si yo pulsé el botón y aún no ha sonado, lo lanzo.
+                if (audioDesbloqueado && !sorpresaReproducida) {
+                    audioEspecial.currentTime = 0;
+                    audioEspecial.play().catch(e => console.error(e));
+                    sorpresaReproducida = true;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

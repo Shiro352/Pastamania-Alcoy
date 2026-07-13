@@ -28,14 +28,6 @@
         button.mesa-btn:active:not(:disabled) { background-color: var(--accent-color); color: white; transform: translateY(1px); }
         button.mesa-btn:disabled { border: 3px solid var(--locked-color) !important; background-color: #f5eef8; color: var(--locked-color); cursor: not-allowed; opacity: 0.7; transform: none; box-shadow: none; }
         #notificacion { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2ecc71; color: white; padding: 15px 30px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: none; font-weight: 600; z-index: 100; }
-        #overlay-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal { background: white; padding: 30px; border-radius: 20px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .modal h2 { margin-top: 0; color: var(--primary-text); }
-        .modal-botones { display: flex; gap: 15px; justify-content: center; margin-top: 25px; }
-        .btn-modal { flex: 1; padding: 15px; font-size: 1.2em; font-weight: 600; border: none; border-radius: 10px; cursor: pointer; transition: 0.2s; color: white;}
-        .btn-si { background-color: #e74c3c; } .btn-si:hover { background-color: #c0392b; }
-        .btn-no { background-color: #3498db; } .btn-no:hover { background-color: #2980b9; }
-        .btn-cancelar { width: 100%; margin-top: 15px; padding: 10px; background: transparent; color: #7f8c8d; border: 1px solid #bdc3c7; border-radius: 10px; cursor: pointer; font-weight: 600;}
     </style>
 </head>
 <body>
@@ -58,21 +50,10 @@
     </div>
 
     <div id="notificacion">Mesa enviada</div>
-    <div id="overlay-modal">
-        <div class="modal">
-            <h2 id="titulo-modal">Mesa X</h2>
-            <p>¿Esta mesa incluye carnes para los fuegos?</p>
-            <div class="modal-botones">
-                <button class="btn-modal btn-si" id="btn-carne-si">🥩 SÍ</button>
-                <button class="btn-modal btn-no" id="btn-carne-no">🍝 NO</button>
-            </div>
-            <button class="btn-cancelar" id="btn-cancelar-modal">Cancelar</button>
-        </div>
-    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"; 
-        import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+        import { getDatabase, ref, push, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDBcfwxeLFhbYVZOUT8Wv-SadGgzdQ6jDk",
@@ -93,9 +74,6 @@
         const contenedor = document.getElementById('contenedor-mesas');
         const listaRegistro = document.getElementById('lista-registro');
         const notif = document.getElementById('notificacion');
-        const overlayModal = document.getElementById('overlay-modal');
-        const tituloModal = document.getElementById('titulo-modal');
-        let mesaSeleccionadaActual = null;
         let bloqueosActuales = {};
 
         for (let i = 1; i <= 50; i++) {
@@ -103,21 +81,10 @@
             btn.className = 'mesa-btn';
             btn.id = `btn-mesa-${i}`;
             btn.innerText = i;
-            btn.onclick = () => abrirModalCarnes(i);
+            // Ya no se pregunta si hay carnes: se marcha directamente (sin fuegos).
+            btn.onclick = () => procesarMarcha(i, false);
             contenedor.appendChild(btn);
         }
-
-        function abrirModalCarnes(numero) {
-            mesaSeleccionadaActual = numero;
-            tituloModal.innerText = `Marchar Mesa ${numero}`;
-            overlayModal.style.display = 'flex';
-        }
-
-        function cerrarModal() { overlayModal.style.display = 'none'; mesaSeleccionadaActual = null; }
-
-        document.getElementById('btn-cancelar-modal').onclick = cerrarModal;
-        document.getElementById('btn-carne-si').onclick = () => { procesarMarcha(mesaSeleccionadaActual, true); cerrarModal(); };
-        document.getElementById('btn-carne-no').onclick = () => { procesarMarcha(mesaSeleccionadaActual, false); cerrarModal(); };
 
         function procesarMarcha(numero, tieneCarnes) {
             const timestampActual = Date.now();
@@ -211,7 +178,8 @@
         });
 
         setInterval(actualizarBotonesBloqueados, 10000);
-                // === LÓGICA DEL MODAL SORPRESA ===
+        // === LÓGICA DEL MODAL SORPRESA ===
+        // (En sala puede no existir el HTML de la sorpresa; si no está, no hacemos nada.)
         const MI_ESTACION = "sala"; // <-- ¡CAMBIA ESTO EN CADA HTML (sala, cocina, fuegos)!
 
         const modalSorpresa = document.getElementById('modal-sorpresa');
@@ -219,59 +187,61 @@
         const textoEspera = document.getElementById('texto-espera');
         const audioEspecial = document.getElementById('audio-especial');
 
-        let audioDesbloqueado = false;
-        let sorpresaReproducida = false;
+        if (modalSorpresa && btnSorpresa && textoEspera && audioEspecial) {
+            let audioDesbloqueado = false;
+            let sorpresaReproducida = false;
 
-        // 1. Cuando el camarero/cocinero pulsa el botón en su tablet
-        btnSorpresa.addEventListener('click', () => {
-            // Engañamos al navegador reproduciendo y pausando rápido el audio a volumen 0
-            // Esto nos da "permiso" para hacerlo sonar luego automáticamente.
-            audioEspecial.volume = 0;
-            audioEspecial.play().then(() => {
-                audioEspecial.pause();
-                audioEspecial.currentTime = 0;
-                audioEspecial.volume = 1;
-                audioDesbloqueado = true;
-
-                // Cambiamos lo que se ve en pantalla
-                btnSorpresa.style.display = 'none';
-                textoEspera.style.display = 'block';
-
-                // Avisamos a Firebase de que ESTA tablet ya está lista
-                update(ref(db, 'sorpresa_estado'), {
-                    [MI_ESTACION]: true
-                });
-            }).catch(err => console.log("Error desbloqueando audio:", err));
-        });
-
-        // 2. Escuchamos en tiempo real cómo van las demás tablets
-        onValue(ref(db, 'sorpresa_estado'), (snapshot) => {
-            const estado = snapshot.val() || {};
-            const todosListos = estado.sala && estado.cocina && estado.fuegos;
-
-            if (!todosListos) {
-                // Si falta alguien, el modal sigue mostrándose (ideal para cuando reseteas la broma)
-                modalSorpresa.style.display = 'flex';
-        
-                // Si en mi estación el estado no es true, muestro el botón. Si es true, muestro el texto de espera.
-                if (!estado[MI_ESTACION]) {
-                    btnSorpresa.style.display = 'block';
-                    textoEspera.style.display = 'none';
-                }
-                sorpresaReproducida = false;
-        
-            } else {
-                // ¡LAS 3 TABLETS HAN PULSADO!
-                modalSorpresa.style.display = 'none'; // Escondemos el modal y liberamos las pantallas
-
-                // Si yo pulsé el botón y aún no ha sonado, lo lanzo.
-                if (audioDesbloqueado && !sorpresaReproducida) {
+            // 1. Cuando el camarero/cocinero pulsa el botón en su tablet
+            btnSorpresa.addEventListener('click', () => {
+                // Engañamos al navegador reproduciendo y pausando rápido el audio a volumen 0
+                // Esto nos da "permiso" para hacerlo sonar luego automáticamente.
+                audioEspecial.volume = 0;
+                audioEspecial.play().then(() => {
+                    audioEspecial.pause();
                     audioEspecial.currentTime = 0;
-                    audioEspecial.play().catch(e => console.error(e));
-                    sorpresaReproducida = true;
+                    audioEspecial.volume = 1;
+                    audioDesbloqueado = true;
+
+                    // Cambiamos lo que se ve en pantalla
+                    btnSorpresa.style.display = 'none';
+                    textoEspera.style.display = 'block';
+
+                    // Avisamos a Firebase de que ESTA tablet ya está lista
+                    update(ref(db, 'sorpresa_estado'), {
+                        [MI_ESTACION]: true
+                    });
+                }).catch(err => console.log("Error desbloqueando audio:", err));
+            });
+
+            // 2. Escuchamos en tiempo real cómo van las demás tablets
+            onValue(ref(db, 'sorpresa_estado'), (snapshot) => {
+                const estado = snapshot.val() || {};
+                const todosListos = estado.sala && estado.cocina && estado.fuegos;
+
+                if (!todosListos) {
+                    // Si falta alguien, el modal sigue mostrándose (ideal para cuando reseteas la broma)
+                    modalSorpresa.style.display = 'flex';
+            
+                    // Si en mi estación el estado no es true, muestro el botón. Si es true, muestro el texto de espera.
+                    if (!estado[MI_ESTACION]) {
+                        btnSorpresa.style.display = 'block';
+                        textoEspera.style.display = 'none';
+                    }
+                    sorpresaReproducida = false;
+            
+                } else {
+                    // ¡LAS 3 TABLETS HAN PULSADO!
+                    modalSorpresa.style.display = 'none'; // Escondemos el modal y liberamos las pantallas
+
+                    // Si yo pulsé el botón y aún no ha sonado, lo lanzo.
+                    if (audioDesbloqueado && !sorpresaReproducida) {
+                        audioEspecial.currentTime = 0;
+                        audioEspecial.play().catch(e => console.error(e));
+                        sorpresaReproducida = true;
+                    }
                 }
-            }
-        });
+            });
+        }
     </script>
 </body>
 </html>
